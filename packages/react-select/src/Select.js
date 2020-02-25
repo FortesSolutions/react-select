@@ -378,11 +378,6 @@ export default class Select extends Component<Props, State> {
     this.startListeningComposition();
     this.startListeningToTouch();
 
-    if (this.props.closeMenuOnScroll && document && document.addEventListener) {
-      // Listen to all scroll events, and filter them out inside of 'onScroll'
-      document.addEventListener('scroll', this.onScroll, true);
-    }
-
     if (this.props.autoFocus) {
       this.focusInput();
     }
@@ -450,16 +445,31 @@ export default class Select extends Component<Props, State> {
   // ==============================
 
   onMenuOpen() {
-    this.props.onMenuOpen();
+    if (!this.props.isMenuOpen) {
+      if (this.props.closeMenuOnScroll && document && document.addEventListener) {
+        // Listen to all scroll events, and filter them out inside of 'onScroll'
+        document.addEventListener('scroll', this.onScroll, true);
+      }
+
+      this.props.onMenuOpen();
+    }
   }
   onMenuClose() {
     const { isSearchable, isMulti } = this.props;
-    this.announceAriaLiveContext({
-      event: 'input',
-      context: { isSearchable, isMulti },
-    });
-    this.onInputChange('', { action: 'menu-close' });
-    this.props.onMenuClose();
+
+    if (this.props.isMenuOpen) {
+      if (this.props.closeMenuOnScroll && document && document.removeEventListener) {
+        // Listen to all scroll events, and filter them out inside of 'onScroll'
+        document.removeEventListener('scroll', this.onScroll, true);
+      }
+
+      this.announceAriaLiveContext({
+        event: 'input',
+        context: { isSearchable, isMulti },
+      });
+      this.onInputChange('', { action: 'menu-close' });
+      this.props.onMenuClose();
+    }
   }
   onInputChange(newValue: string, actionMeta: InputActionMeta) {
     this.props.onInputChange(newValue, actionMeta);
@@ -971,11 +981,11 @@ export default class Select extends Component<Props, State> {
         event.target instanceof HTMLElement &&
         isDocumentElement(event.target)
       ) {
-        this.props.onMenuClose();
+        this.onMenuClose();
       }
     } else if (typeof this.props.closeMenuOnScroll === 'function') {
       if (this.props.closeMenuOnScroll(event)) {
-        this.props.onMenuClose();
+        this.onMenuClose();
       }
     }
   };
